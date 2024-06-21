@@ -1,0 +1,89 @@
+pipeline {
+    agent any
+    environment {
+        GIT_URL = 'https://github.com/sumit0920/Jenkins_Project'
+        GIT_CREDENTIALS = 'sumit0920'
+        SLACK_CHANNEL = '#jenkins-devops'
+        EMAIL_RECIPIENTS = 'sumitsharma.aset@gmail.com'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: env.GIT_URL, credentialsId: env.GIT_CREDENTIALS
+            }
+        }
+        stage('Create Branch') {
+            steps {
+                script {
+                    try {
+                        sh 'git checkout -b new-branch'
+                    } catch (Exception e) {
+                        sendNotifications("Failed to create branch: ${e.message}")
+                        error("Failed to create branch")
+                    }
+                }
+            }
+        }
+        stage('List Branches') {
+            steps {
+                script {
+                    try {
+                        sh 'git branch -a'
+                    } catch (Exception e) {
+                        sendNotifications("Failed to list branches: ${e.message}")
+                        error("Failed to list branches")
+                    }
+                }
+            }
+        }
+        stage('Merge Branches') {
+            steps {
+                script {
+                    try {
+                        sh 'git merge branch-to-merge'
+                    } catch (Exception e) {
+                        sendNotifications("Failed to merge branches: ${e.message}")
+                        error("Failed to merge branches")
+                    }
+                }
+            }
+        }
+        stage('Rebase Branches') {
+            steps {
+                script {
+                    try {
+                        sh 'git rebase branch-to-rebase'
+                    } catch (Exception e) {
+                        sendNotifications("Failed to rebase branches: ${e.message}")
+                        error("Failed to rebase branches")
+                    }
+                }
+            }
+        }
+        stage('Delete Branch') {
+            steps {
+                script {
+                    try {
+                        sh 'git branch -d branch-to-delete'
+                    } catch (Exception e) {
+                        sendNotifications("Failed to delete branch: ${e.message}")
+                        error("Failed to delete branch")
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            sendNotifications("All Git operations completed successfully")
+        }
+        failure {
+            sendNotifications("Git operations failed")
+        }
+    }
+}
+
+def sendNotifications(String message) {
+    slackSend(channel: env.SLACK_CHANNEL, message: message)
+    emailext(subject: "Jenkins Job Notification", body: message, to: env.EMAIL_RECIPIENTS)
+}
